@@ -37,6 +37,13 @@ void http_quick_register(const char * uri, httpd_method_t method,  esp_err_t han
     httpd_register_uri_handler(server, &uri_handler);
 }
 
+static esp_err_t reboot_handler(httpd_req_t *req) {
+    const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
+    esp_ota_set_boot_partition(update_partition);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    esp_restart();
+}
+
 #define MAX_FLASH_SIZE  2024000
 static esp_err_t flash_post_handler(httpd_req_t *req) {
 
@@ -63,7 +70,7 @@ static esp_err_t flash_post_handler(httpd_req_t *req) {
     update_partition = esp_ota_get_next_update_partition(NULL);
 
 
-    ESP_LOGD(TAG, "Writing to partition subtype %d at offset 0x%x",
+    ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
              update_partition->subtype, update_partition->address);
     assert(update_partition != NULL);    
 
@@ -79,7 +86,7 @@ static esp_err_t flash_post_handler(httpd_req_t *req) {
 
     while (remaining > 0) {
 
-        ESP_LOGD(TAG, "Remaining size : %d", remaining);
+        ESP_LOGI(TAG, "Remaining size : %d", remaining);
         /* Receive the file part by part into a buffer */
         if ((received = httpd_req_recv(req, buf, MIN(remaining, SCRATCH_BUFSIZE))) <= 0) {
             if (received == HTTPD_SOCK_ERR_TIMEOUT) {
@@ -99,17 +106,17 @@ static esp_err_t flash_post_handler(httpd_req_t *req) {
             if (received > sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t)) {
                 // check current version with downloading
                 memcpy(&new_app_info, &buf[sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t)], sizeof(esp_app_desc_t));
-                ESP_LOGD(TAG, "New firmware version: %s", new_app_info.version);
+                ESP_LOGI(TAG, "New firmware version: %s", new_app_info.version);
 
                 esp_app_desc_t running_app_info;
                 if (esp_ota_get_partition_description(running, &running_app_info) == ESP_OK) {
-                    ESP_LOGD(TAG, "Running firmware version: %s", running_app_info.version);
+                    ESP_LOGI(TAG, "Running firmware version: %s", running_app_info.version);
                 }
 
                 const esp_partition_t* last_invalid_app = esp_ota_get_last_invalid_partition();
                 esp_app_desc_t invalid_app_info;
                 if (esp_ota_get_partition_description(last_invalid_app, &invalid_app_info) == ESP_OK) {
-                    ESP_LOGD(TAG, "Last invalid firmware version: %s", invalid_app_info.version);
+                    ESP_LOGI(TAG, "Last invalid firmware version: %s", invalid_app_info.version);
                 }
 
                 // check current version with last invalid partition
@@ -162,22 +169,22 @@ static esp_err_t flash_post_handler(httpd_req_t *req) {
         remaining -= received;
     }
 
-    ESP_LOGD(TAG, "File reception complete");
+    ESP_LOGI(TAG, "File reception complete");
 
     /* Redirect onto root to see the updated file list */
     httpd_resp_set_status(req, "303 See Other");
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_sendstr(req, "File uploaded successfully");
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    esp_ota_set_boot_partition(update_partition);
+
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
     esp_restart();
     return ESP_OK;
 }
 
 extern "C" void app_main()
 {
-    //initArduino();
-    //nvs_flash_erase();
     ESP_ERROR_CHECK(nvs_flash_init());
     tcpip_adapter_init();
 
@@ -208,6 +215,7 @@ extern "C" void app_main()
     }
 
     http_quick_register("/update", HTTP_POST, flash_post_handler, server_data);
+    http_quick_register("/reboot", HTTP_GET, reboot_handler, server_data);
 
     wifi_plugin = new WiFiPlugin();
     wifi_plugin->init();

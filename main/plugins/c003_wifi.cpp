@@ -4,21 +4,21 @@
 
 static const char *TAG = "WiFiPlugin";
 
-static esp_err_t ap_mode(WiFiPlugin &p) {
-    esp_wifi_stop();
-    p.wifi_config = {};
-    strcpy((char*)p.wifi_config.ap.ssid, "ESP32Ctrl");
-    strcpy((char*)p.wifi_config.ap.password, "");
-    p.wifi_config.ap.ssid_len = strlen((char*)p.wifi_config.ap.ssid);
-    p.wifi_config.ap.max_connection = 5;
-    p.wifi_config.ap.authmode = WIFI_AUTH_OPEN;
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &p.wifi_config));
-    esp_wifi_start();
-
-    return ESP_OK;
-}
+//static esp_err_t ap_mode(WiFiPlugin &p) {
+//    esp_wifi_stop();
+//    p.wifi_config = {};
+//    strcpy((char*)p.wifi_config.ap.ssid, "ESP32Ctrl");
+//    strcpy((char*)p.wifi_config.ap.password, "");
+//    p.wifi_config.ap.ssid_len = strlen((char*)p.wifi_config.ap.ssid);
+//    p.wifi_config.ap.max_connection = 5;
+//    p.wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+//    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+//    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+//    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &p.wifi_config));
+//    esp_wifi_start();
+//
+//    return ESP_OK;
+//}
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -39,6 +39,9 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
             ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
 			ESP_LOGI(TAG, "reason: %d\n",event->event_info.disconnected.reason);
             ESP_ERROR_CHECK(esp_wifi_connect());
+            break;
+        case SYSTEM_EVENT_STA_CONNECTED:
+            ESP_LOGI(TAG, "SYSTEM_EVENT_STA_CONNECTED");
             break;
         default:
             ESP_LOGI(TAG, "SYSTEM_EVENT_WifI_%d", event->event_id);
