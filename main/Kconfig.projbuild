@@ -1,0 +1,17 @@
+menu "OTA Updater"
+
+    config OTA_REQUIRE_APP_HASH
+        bool "Require SHA-256 for app-partition updates"
+        default y
+        help
+            When enabled, a POST /update targeting an app partition must carry an
+            expected SHA-256 (query ?sha256=<64-hex> or header X-Expected-SHA256).
+            If the hash is missing or malformed the request is rejected with
+            400 Bad Request and nothing is written. The booted firmware is thus
+            always content-verified.
+
+            Disable only for development to allow flashing an app image without a
+            hash. Data-partition updates verify the hash only when one is supplied
+            regardless of this option.
+
+endmenu

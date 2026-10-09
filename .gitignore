@@ -5,3 +5,6 @@ makefs.sh
 spiffs.bin
 sdkconfig.old
 sdkconfig
+.cache/
+tmp/
+sdkconfig.defaults.old

@@ -1,8 +1,54 @@
+# Minimal OTA updater — stripped for size. ESP-IDF v5.5.2.
+#
+# Target-neutral. The chip is chosen with `idf.py set-target <chip>` (freeesp32_ave's
+# flash_all.sh does this automatically to match the main app), and per-target
+# flash size lives in sdkconfig.defaults.<target>. Do NOT pin CONFIG_IDF_TARGET
+# here: the updater image MUST be built for the same chip as the device it is
+# flashed onto, and a pinned target silently produces a wrong-chip binary.
+
+# Custom dual-OTA partition table (otadata + ota_0 + ota_1 + storage + cfgfs).
+# NOTE: this table is a build-time PLACEHOLDER only — see partitions.csv. The
+# updater resolves every partition at RUNTIME from whatever table the device
+# actually has, so it does not need to match the main project's table.
 CONFIG_PARTITION_TABLE_CUSTOM=y
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_example.csv"
-CONFIG_PARTITION_TABLE_CUSTOM_APP_BIN_OFFSET=0x10000
-CONFIG_PARTITION_TABLE_FILENAME="partitions_example.csv"
-CONFIG_APP_OFFSET=0x10000
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
+# Optimize for size
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_SILENT=y
+
+# Quiet logging (strips ESP_LOGI/D strings from the binary)
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+# Bootloader log NONE: separate image, but strips its log strings. Recovery is
+# still visible via the app's WARN logs over UART0.
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
+
+# --- Size reductions (app image) ---
+# Nano printf/scanf: smaller formatting code pulled from newlib/libc.
+CONFIG_NEWLIB_NANO_FORMAT=y
+
+# We only use IPv4 on the LAN/AP. Drop the entire IPv6 stack in lwIP.
+CONFIG_LWIP_IPV6=n
+
+# Our SoftAP is WPA2-PSK only; STA-side WPA3/SAE stays enabled so we can still
+# join modern routers. Drop AP-side SAE (WPA3) which we never advertise.
+CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT=n
+
+# No TLS anywhere in this firmware: drop the X.509 root-cert bundle (and the
+# TLS-layer mbedTLS features). The crypto primitives mbedcrypto provides for
+# WPA2 stay linked.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=n
+
+# No C++ runtime needed (pure C); exceptions/RTTI off (defaults, explicit here)
+# CONFIG_COMPILER_CXX_EXCEPTIONS is not set
+# CONFIG_COMPILER_CXX_RTTI is not set
+
+# Trim WiFi: plain-HTTP LAN/AP updates only, no WPA2-Enterprise/TLS supplicant
+CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT=n
+
+# Single core (saves RAM/flash; OTA does not need SMP)
+CONFIG_FREERTOS_UNICORE=y
+
+# Room for upload request headers
 CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
-CONFIG_CXX_EXCEPTIONS=y
-CONFIG_CXX_EXCEPTIONS_EMG_POOL_SIZE=1024

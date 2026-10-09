@@ -1,0 +1,7 @@
+# ESP32-S3 (YB-ESP32-S3-DAC): 16 MB flash.
+#
+# Only the updater's APP image is ever written to the device (to ota_1), so its
+# own partition table and bootloader are not flashed — but the app must still be
+# built for this chip. See freeesp32_ave/legacyesp32.md.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"

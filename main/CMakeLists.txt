@@ -1,5 +1,2 @@
-#set(COMPONENT_SRCS "main.cpp")
-set(COMPONENT_SRCDIRS "." "./plugins" "./lib")
-set(COMPONENT_ADD_INCLUDEDIRS "." "./plugins" "./lib")
-
-register_component()
+idf_component_register(SRCS "main.c" "wifi.c"
+                       INCLUDE_DIRS ".")
